@@ -1,3 +1,4 @@
+import uuid
 import json
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
@@ -25,10 +26,12 @@ class HygieneRequest(BaseModel):
 @app.post("/analyze")
 async def analyze_logs(request: HygieneRequest):
     try:
+        session_id = f"{request.service_name}-{uuid.uuid4().hex}"
+
         await session_service.create_session(
             app_name=APP_NAME,
             user_id=USER_ID,
-            session_id=request.service_name,
+            session_id=session_id,
         )
 
         runner = Runner(
@@ -45,7 +48,7 @@ async def analyze_logs(request: HygieneRequest):
         result_text = ""
         async for event in runner.run_async(
             user_id=USER_ID,
-            session_id=request.service_name,
+            session_id=session_id,
             new_message=message,
         ):
             print(f"EVENT: author={event.author} is_final={event.is_final_response()} content={event.content}")
