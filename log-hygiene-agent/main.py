@@ -1,6 +1,8 @@
 import uuid
 import json
-from fastapi import FastAPI, HTTPException
+import os
+from fastapi import FastAPI, HTTPException, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from dotenv import load_dotenv
 from google.adk.runners import Runner
@@ -18,12 +20,21 @@ session_service = InMemorySessionService()
 APP_NAME = "log_hygiene_agent"
 USER_ID = "n8n"
 
+security = HTTPBearer()
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    expected = os.environ.get("AGENT_API_KEY")
+    if not expected:
+        raise HTTPException(status_code=500, detail="AGENT_API_KEY not configured")
+    if credentials.credentials != expected:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+
 
 class HygieneRequest(BaseModel):
     service_name: str
 
 
-@app.post("/analyze")
+@app.post("/analyze", dependencies=[Depends(verify_token)])
 async def analyze_logs(request: HygieneRequest):
     try:
         session_id = f"{request.service_name}-{uuid.uuid4().hex}"
