@@ -1,5 +1,5 @@
 import os
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import httpx
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
@@ -29,6 +29,7 @@ class DispositionItem(BaseModel):
 class LogHygieneResponse(BaseModel):
     service: str
     disposition_table: List[DispositionItem]
+    note: Optional[str] = Field(default=None, description="Explanation when no analysis was possible.")
 
 
 # 3. Tool function with original strict signature (hardcoded window and limit)
@@ -112,7 +113,7 @@ agent = Agent(
 You are an expert log hygiene analyst for an engineering team. Your job is to:
 
 1. Query Datadog for the top 5 most frequent error/warning log patterns for the given service.
-2. If the tool returns an error status, explain that you couldn't retrieve the data.
+2. If the tool returns an error status or no log data, you MUST still respond with the JSON schema: set disposition_table to an empty array and put a one-sentence explanation in the note field. NEVER respond with prose outside the JSON structure.
 3. If successful, analyze each unique log pattern and recommend one of these actions:
    - Fix: The log represents a genuine bug or unhandled edge case.
    - Silence: The log is expected noise (e.g., known network timeout) and should be suppressed.
